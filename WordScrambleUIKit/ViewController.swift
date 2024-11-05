@@ -11,14 +11,29 @@ class ViewController: UITableViewController {
     
     private var allWords = [String]()
     private var usedWords = [String]()
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(promptForAnswer))
         
+        let defaults = UserDefaults.standard
+        let jsonDecoder = JSONDecoder()
         
-        if let startWordsUrl = Bundle.main.url(forResource: "start", withExtension: "txt") {
+        if let allWordsData = defaults.data(forKey: "allData") {
+            if let savedAllWords = try? jsonDecoder.decode([String].self, from: allWordsData) {
+                allWords = savedAllWords
+            }
+        }
+        
+        if let usedWordsData = defaults.data(forKey: "usedWords") {
+            if let savedUsedWords = try? jsonDecoder.decode([String].self, from: usedWordsData) {
+                usedWords = savedUsedWords
+            }
+        }
+        
+        
+        if allWords.isEmpty, let startWordsUrl = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsUrl, encoding: .utf8 ) {
                 allWords = startWords.components(separatedBy: "\n")
             }
@@ -33,7 +48,6 @@ class ViewController: UITableViewController {
     
     func startGame() {
         title = allWords.randomElement()
-        usedWords.removeAll(keepingCapacity: true)
         tableView.reloadData()
     }
     
@@ -68,6 +82,7 @@ class ViewController: UITableViewController {
         
         if isPossible(word: lowerAnswer) && isOriginal(word: lowerAnswer) && isReal(word: lowerAnswer) {
             usedWords.insert(lowerAnswer, at: 0)
+            save()
             
             let indexPath = IndexPath(row: 0, section: 0)
             tableView.insertRows(at: [indexPath], with: .automatic)
@@ -107,6 +122,19 @@ class ViewController: UITableViewController {
         let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
         
         return misspelledRange.location == NSNotFound
+    }
+    
+    func save() {
+        let jsonEncoder = JSONEncoder()
+        let defaults = UserDefaults.standard
+        
+        if let savedAllWords = try? jsonEncoder.encode(allWords) {
+            defaults.set(savedAllWords, forKey: "allWords")
+        }
+        
+        if let savedUsedWords = try? jsonEncoder.encode(usedWords) {
+            defaults.set(savedUsedWords, forKey: "usedWords")
+        }
     }
 
 }
